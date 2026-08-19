@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="{{ language }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · {{ localeLabel }}</title>
+  <link rel="icon" href="/assets/img/logos/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/site.css">
+  {% include "partials/dc-meta.njk" %}
+  {% include "partials/i18n-meta.njk" %}
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  {% set tree = collections.navTrees[locale] %}
+
+  <header class="site-header">
+    <a class="site-header__home" href="/{{ locale }}/">
+      <img src="/assets/img/logos/logo-lockup-dark.svg" alt="Vishpala" height="32">
+    </a>
+    <nav class="site-header__menu" aria-label="{{ localeLabel }}">
+      {% include "partials/header-nav.njk" %}
+    </nav>
+    {% include "partials/language-switcher.njk" %}
+  </header>
+
+  <div class="layout">
+    <details class="nav-disclosure">
+      <summary>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        Menu
+      </summary>
+      <nav class="site-nav" aria-label="{{ localeLabel }}">
+        {% include "partials/nav.njk" %}
+      </nav>
+    </details>
+
+    <nav class="site-nav site-nav--persistent" aria-label="{{ localeLabel }}">
+      {% include "partials/nav.njk" %}
+    </nav>
+
+    <main id="main" class="site-main">
+      {{ content | safe }}
+    </main>
+  </div>
+
+  {% include "partials/footer.njk" %}
+</body>
+</html>

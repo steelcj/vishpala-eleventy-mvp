@@ -1,0 +1,148 @@
+# Sveltia CMS config (Decap-compatible format).
+#
+# Swap `backend.name` for whatever you're hosting on (github, gitlab, etc.)
+# and fill in `repo`. `git-gateway` below is a placeholder.
+backend:
+  name: git-gateway
+  branch: main
+
+site_url: https://vishpala.com
+logo_url: /assets/img/logos/logo-lockup-dark.svg
+
+# Per-entry relative media: with an empty collection-level media_folder,
+# Sveltia/Decap resolve a field's relative media_folder against the entry
+# being edited, so an image field with media_folder: "index.assets" lands
+# beside that entry's own index.md. Verify this against Sveltia's current
+# docs before relying on it in production — media-folder resolution rules
+# have shifted between CMS versions.
+media_folder: ""
+public_folder: ""
+
+collections:
+  - name: "en_ca"
+    label: "English (Canada)"
+    folder: "content/en-ca"
+    path: "{{slug}}/index"
+    slug: "{{slug}}"
+    create: true
+    format: "frontmatter"
+    extension: "md"
+    fields:
+      - { label: "Title (dc:title)", name: "title", widget: "string" }
+      - { label: "Nav label", name: "navTitle", widget: "string", required: false, hint: "Falls back to Title if left blank." }
+      - { label: "Nav order", name: "order", widget: "number", required: false, default: 100, hint: "Lower numbers sort first among siblings." }
+      - label: "Identifier (dc:identifier)"
+        name: "identifier"
+        widget: "string"
+        required: false
+        pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+        hint: "Unique to THIS file (this Expression). Generate a fresh UUID per new page — this is the English page, so there's nothing to copy from yet."
+      - label: "Relation (dc:relation)"
+        name: "relation"
+        widget: "string"
+        required: false
+        pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+        hint: "The shared Work UUID. If this Work will also exist in French, paste a fresh urn:uuid:... here — the French entry will search for this page by title and copy it automatically, so you only type it once. Local convention: this field means Work-pairing only, not general 'related resource' — unqualified Dublin Core has no way to sub-type it, so don't repurpose it for see-also/part-of links."
+      - label: "Not translated on purpose"
+        name: "localeExclusive"
+        widget: "boolean"
+        required: false
+        default: false
+        hint: "On, if this page will never have a fr-ca counterpart (e.g. English-only press coverage). Leave off if a translation is just pending — the build only warns about the pending case."
+
+      # ---- Remaining unqualified Dublin Core elements (DCMES 1.1). ----
+      # All optional — fill in whatever's true and known, leave the rest
+      # blank. dc:language isn't here: it's derived automatically from
+      # the locale (en-CA for this collection).
+      - { label: "Creator (dc:creator)", name: "creator", widget: "string", required: false, hint: "Primary author or team responsible for this page." }
+      - label: "Subject (dc:subject)"
+        name: "subject"
+        widget: "list"
+        required: false
+        hint: "Keywords/topics, one per line. Renders as one dc.subject tag per entry."
+      - { label: "Description (dc:description)", name: "description", widget: "text", required: false, hint: "A short summary of this page's content." }
+      - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false }
+      - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false, hint: "Someone other than the primary creator who contributed to this page." }
+      - label: "Date (dc:date)"
+        name: "date"
+        widget: "date"
+        required: false
+        date_format: "YYYY-MM-DD"
+        hint: "Leave blank to use this page's actual first-commit date automatically (recommended). Only set this to override that — e.g. backdating migrated content."
+      - { label: "Type (dc:type)", name: "type", widget: "string", required: false, hint: "Nature of the content, e.g. Text, Image, Sound, Dataset — see the DCMI Type Vocabulary." }
+      - { label: "Format (dc:format)", name: "format", widget: "string", required: false, hint: "IANA media type, e.g. text/html." }
+      - { label: "Source (dc:source)", name: "source", widget: "string", required: false, hint: "A related resource this page is derived from, e.g. a URI or citation." }
+      - { label: "Coverage (dc:coverage)", name: "coverage", widget: "string", required: false, hint: "Spatial or temporal scope, e.g. Canada, or 2020–2026." }
+      - { label: "Rights (dc:rights)", name: "rights", widget: "string", required: false, hint: "Copyright or rights statement." }
+
+      - label: "Hero image"
+        name: "hero"
+        widget: "image"
+        required: false
+        media_folder: "index.assets"
+        public_folder: "index.assets"
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  - name: "fr_ca"
+    label: "Français (Canada)"
+    folder: "content/fr-ca"
+    path: "{{slug}}/index"
+    slug: "{{slug}}"
+    create: true
+    format: "frontmatter"
+    extension: "md"
+    fields:
+      - { label: "Title (dc:title)", name: "title", widget: "string" }
+      - { label: "Nav label", name: "navTitle", widget: "string", required: false, hint: "Falls back to Title if left blank." }
+      - { label: "Nav order", name: "order", widget: "number", required: false, default: 100, hint: "Lower numbers sort first among siblings." }
+      - label: "Identifier (dc:identifier)"
+        name: "identifier"
+        widget: "string"
+        required: false
+        pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+        hint: "Unique to THIS file (this Expression) — a fresh UUID, different from the Relation field below."
+      - label: "Relation (dc:relation) — link to the English page"
+        name: "relation"
+        widget: "relation"
+        collection: "en_ca"
+        search_fields: ["title", "relation"]
+        value_field: "relation"
+        display_fields: ["title"]
+        required: false
+        hint: "Search by English title. Selecting a page copies its Work UUID here, pairing this fr-ca page as that page's translation. If there's no English page yet — this is a brand-new, French-first Work — leave this blank and paste a fresh urn:uuid:... by hand instead. Local convention: this field means Work-pairing only, not general 'related resource'."
+      - label: "Not translated on purpose"
+        name: "localeExclusive"
+        widget: "boolean"
+        required: false
+        default: false
+        hint: "On, if this page will never have an en-ca counterpart. Leave off if a translation is just pending — the build only warns about the pending case."
+
+      # ---- Remaining unqualified Dublin Core elements (DCMES 1.1). ----
+      - { label: "Creator (dc:creator)", name: "creator", widget: "string", required: false, hint: "Auteur ou équipe principalement responsable de cette page." }
+      - label: "Subject (dc:subject)"
+        name: "subject"
+        widget: "list"
+        required: false
+        hint: "Mots-clés, un par ligne. Un tag dc.subject par entrée."
+      - { label: "Description (dc:description)", name: "description", widget: "text", required: false }
+      - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false }
+      - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false }
+      - label: "Date (dc:date)"
+        name: "date"
+        widget: "date"
+        required: false
+        date_format: "YYYY-MM-DD"
+        hint: "Laisser vide pour utiliser automatiquement la date du premier commit de cette page (recommandé)."
+      - { label: "Type (dc:type)", name: "type", widget: "string", required: false, hint: "Voir le vocabulaire DCMI Type." }
+      - { label: "Format (dc:format)", name: "format", widget: "string", required: false, hint: "Type de média IANA, ex. text/html." }
+      - { label: "Source (dc:source)", name: "source", widget: "string", required: false }
+      - { label: "Coverage (dc:coverage)", name: "coverage", widget: "string", required: false }
+      - { label: "Rights (dc:rights)", name: "rights", widget: "string", required: false }
+
+      - label: "Hero image"
+        name: "hero"
+        widget: "image"
+        required: false
+        media_folder: "index.assets"
+        public_folder: "index.assets"
+      - { label: "Body", name: "body", widget: "markdown" }

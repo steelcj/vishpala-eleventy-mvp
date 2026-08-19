@@ -1,0 +1,7 @@
+{
+  "locale": "en-ca",
+  "language": "en",
+  "hreflang": "en-CA",
+  "layout": "layouts/page.njk",
+  "localeLabel": "English (Canada)"
+}

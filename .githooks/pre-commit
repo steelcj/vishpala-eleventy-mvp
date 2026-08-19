@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Rebuilds the UUID registry (content/_registry/) from current content
+# front matter before every commit, and stages the result so the
+# registry can never drift out of sync with the content that produced
+# it — no CI dependency, works identically for every contributor and
+# every host.
+#
+# Installed via `git config core.hooksPath .githooks`, which the
+# `prepare` script in package.json sets automatically on `npm install`.
+
+set -e
+
+node scripts/build-registry.js
+
+git add content/_registry

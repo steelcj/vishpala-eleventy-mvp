@@ -1,0 +1,18 @@
+{% macro renderChildren(children) %}
+  {% if children.length %}
+  <ul>
+    {% for node in children %}
+    <li>
+      {% if node.url %}
+        <a href="{{ node.url }}"{% if node.url == page.url %} aria-current="page"{% endif %}>{{ node.title }}</a>
+      {% else %}
+        <span class="nav-group-label">{{ node.title }}</span>
+      {% endif %}
+      {{ renderChildren(node.children) }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+{% endmacro %}
+
+{{ renderChildren(tree.children) }}

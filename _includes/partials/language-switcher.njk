@@ -1,0 +1,20 @@
+{% if relation and collections.byWork[relation] %}
+{% set work = collections.byWork[relation] %}
+<ul class="language-switcher">
+  {% for loc in collections.locales %}
+  {% set match = work.locales[loc] %}
+  {% if match %}
+  <li>
+    <a href="{{ match.url }}"{% if loc == locale %} aria-current="true"{% endif %}>{{ loc }}</a>
+  </li>
+  {% elif not localeExclusive %}
+  <li>
+    <a class="language-switcher__missing" href="/{{ loc }}/"
+       title="Not yet translated into {{ loc }} — this goes to the {{ loc }} home page instead">
+      {{ loc }} <span aria-hidden="true">&dagger;</span>
+    </a>
+  </li>
+  {% endif %}
+  {% endfor %}
+</ul>
+{% endif %}

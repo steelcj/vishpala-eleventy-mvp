@@ -1,0 +1,10 @@
+<link rel="canonical" href="{{ site.url }}{{ page.url }}">
+{% if relation and collections.byWork[relation] %}
+{% set work = collections.byWork[relation] %}
+{% for loc, expr in work.locales %}
+<link rel="alternate" hreflang="{{ expr.hreflang or loc }}" href="{{ site.url }}{{ expr.url }}">
+{% endfor %}
+{% if work.defaultExpr %}
+<link rel="alternate" hreflang="x-default" href="{{ site.url }}{{ work.defaultExpr.url }}">
+{% endif %}
+{% endif %}

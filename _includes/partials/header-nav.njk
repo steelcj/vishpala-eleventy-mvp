@@ -1,0 +1,15 @@
+{# Only top-level nodes (folders directly under content/<locale>/) that
+   have their own page (an index.md) — a folder with no index.md has
+   nothing to link to and isn't dropdown-capable in a flat header menu,
+   so it's left out here and still reachable via the sidebar instead. #}
+{% if tree.children.length %}
+<ul>
+  {% for node in tree.children %}
+    {% if node.url %}
+    <li>
+      <a href="{{ node.url }}"{% if node.url == page.url %} aria-current="page"{% endif %}>{{ node.title }}</a>
+    </li>
+    {% endif %}
+  {% endfor %}
+</ul>
+{% endif %}

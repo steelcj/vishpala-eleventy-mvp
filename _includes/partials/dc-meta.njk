@@ -1,0 +1,24 @@
+{% set dc = {
+  title: title,
+  creator: creator,
+  description: description,
+  publisher: publisher,
+  contributor: contributor,
+  date: page.date | dcDate,
+  type: type,
+  format: format,
+  identifier: identifier,
+  source: source,
+  language: hreflang or language,
+  relation: relation,
+  coverage: coverage,
+  rights: rights
+} %}
+{% for key, value in dc %}
+{% if value %}
+<meta name="dc.{{ key }}" content="{{ value }}">
+{% endif %}
+{% endfor %}
+{% for term in subject %}
+<meta name="dc.subject" content="{{ term }}">
+{% endfor %}
