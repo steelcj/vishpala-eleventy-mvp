@@ -81,26 +81,23 @@ an AAC rendering) without redesigning the pairing mechanism.
 
 ## Sveltia CMS (`admin/config.yml`)
 
-One folder collection per locale (`en_ca`, `fr_ca`), sharing a field set
-via a YAML anchor. `identifier` and `relation` are exposed as plain string
-fields with hints explaining what to put in them — generating and pairing
-UUIDs is a manual editorial step in this MVP, not automated. A field-level
-`hero` image widget demonstrates the per-entry `index.assets/` pattern.
-
-**Scoped out of this MVP, on purpose:** the CMS always creates new pages
-in the `slug/index.md` shape. The `legal/privacy.md`-style flat leaf
-pattern is something Eleventy reads and renders correctly (see above) but
-the CMS doesn't currently *author* — that'd need either a second
-"leaf pages" collection per locale or custom UI, and wasn't worth adding
-before the core read/build/nav loop was solid. `backend.name: git-gateway`
-is a placeholder; point it at `github`/`gitlab`/whatever actually hosts
-this repo, and set `repo`.
+**Superseded — see "CMS structure: File Collections" further down for
+the current, accurate description.** Originally a folder collection per
+locale; migrated to File Collections after confirming Sveltia can't
+create nested folders through its UI. One thing worth noting explicitly
+since it was flagged as a real gap at the time: the old design couldn't
+*author* the `legal/privacy.md`-style flat leaf pattern through the CMS
+at all — File Collections' literal per-page paths close that gap for
+free, since `privacy` is just another explicit `files:` entry now, no
+special-casing needed.
 
 The `media_folder`/`public_folder` relative-path setup for per-entry
 `index.assets/` folders is written the way current Decap-compatible docs
 describe it, but that resolution behavior has changed across CMS versions
 before — worth a smoke test against a real Sveltia CMS instance rather
-than trusting it blind.
+than trusting it blind. `backend.name: git-gateway` is also still a
+placeholder — point it at `github`/`gitlab`/whatever actually hosts
+this repo, and set `repo`, before this goes near production.
 
 ## SEO: canonical + hreflang (`_includes/partials/i18n-meta.njk`)
 
@@ -144,19 +141,77 @@ console. Errors don't fail the build by default (so a typo doesn't block
 someone from previewing their edit) — set `ELEVENTY_STRICT=1` to make
 errors throw, e.g. in CI: `ELEVENTY_STRICT=1 npm run build`.
 
-## CMS translation pairing (`admin/config.yml`)
+## CMS structure: File Collections, not Folder Collections (`admin/config.yml`)
 
-`identifier` and `relation` are now pattern-validated at entry time
-(`urn:uuid:…`) in both collections, and there's a `localeExclusive`
-toggle matching the front matter field above. For pairing: `fr_ca`'s
-`relation` field is a Decap/Sveltia `relation` widget that searches
-`en_ca` entries by title and copies the matched entry's `relation` value
-in — an editor creating the French page picks the English page by name
-instead of retyping a UUID. This is scoped one direction only (French
-looks up English) on the assumption English is usually authored first;
-a brand-new French-first Work still needs a hand-typed UUID, per the
-field's hint text. Flipping it to work both ways would need either a
-second field or a custom widget — not built here.
+**This changed since the last update — the previous section here
+described a mechanism that no longer exists.** Migrated from Folder
+Collections (`folder: "content/en-ca"`, `path: "{{slug}}/index"`) to
+File Collections (`files:`, one explicit hand-listed entry per page).
+
+**Why**: confirmed directly from Sveltia's maintainer
+([discussion #598](https://github.com/sveltia/sveltia-cms/discussions/598)) —
+Sveltia CMS cannot create new nested folders through its UI; this is a
+known, currently-unimplemented feature, planned for a 2.0 release, not
+a configuration mistake. The old Folder Collections' `path:
+"{{slug}}/index"` template is exactly one directory level, so it could
+never reach `about/commitments/index.md` or `about/legal/privacy.md`
+(both two levels deep) — those pages only ever worked because they were
+hand-placed in the filesystem outside the CMS. An editor clicking "New
+entry" could never have recreated that structure. Full analysis,
+including why native i18n doesn't solve this either (this site's
+translated slugs — `about`/`a-propos`, `team`/`équipe` — can't be
+expressed through Sveltia's `{{locale}}` placeholder, which only
+substitutes the locale code, not arbitrary path segments), is in
+`docs/swot--how-sveltia-cms-should-model-translation-and-page-structure.md`.
+
+**What changed structurally**:
+- Every real page (12 total) is now an explicit `files:` entry, listed
+  under `en_ca`/`fr_ca` collections as before — same locale grouping in
+  the CMS sidebar, different mechanism underneath. Every declared path
+  was checked against the actual filesystem before shipping; all 12
+  matched with no typos.
+- **Home is a singleton**, not a normal file entry — the one page on
+  this site where the en-ca and fr-ca slugs are genuinely identical
+  (`index`), confirmed by checking every real page's slug pair. That's
+  what makes it the one place `i18n: true` and the `{{locale}}`
+  placeholder actually apply, with real side-by-side locale editing and
+  `relation: duplicate` auto-copying the shared Work UUID to both files
+  automatically — no copy-paste needed for Home specifically.
+- **The `fr_ca`-only `relation` widget (searching `en_ca` by title) is
+  gone.** It depended on a clean "one collection per locale" structure
+  that File Collections doesn't preserve the same way. `relation` is
+  now a plain, pattern-validated string field on every page, symmetric
+  across locales — same field shape as `identifier`. An editor pairing
+  a translation now copies the Work UUID from `content/_registry/works/`
+  (human-readable labels, searchable by title) instead of picking from
+  an interactive widget. Real tradeoff, not hidden: this is a step back
+  in convenience from the old one-direction autofill, traded for a
+  structure that can actually reach every page.
+- Shared field list (~19 fields — the 15 DC elements, `identifier`,
+  `relation`, `localeExclusive`, `hero`) extracted into one YAML anchor
+  (`_page_fields`) referenced by all 10 non-Home entries, rather than
+  duplicated per page. Verified programmatically that the anchor
+  resolves to the same shared object in every entry, not a
+  silently-diverged copy.
+
+**What editors need to know going forward**: every existing page is
+freely editable from the CMS sidebar. **A genuinely new page still
+requires a developer to add a `files:` entry to `admin/config.yml`
+first** — not a workaround to route around later, an accurate
+reflection of the real Sveltia limitation above. Revisit if Sveltia
+ships nested collections — check the SWOT doc's "Currency check"
+section before assuming this constraint still holds; that project
+ships frequently (500+ releases at time of writing).
+
+**Not done as part of this migration**: `modality` (the field for
+accessibility-variant Expressions sharing a Work with the standard
+reading) doesn't exist in this codebase yet, despite being described as
+already-integrated in the SWOT doc's Option A/C comparison. That
+description was inaccurate at the time it was written — checked
+directly, zero occurrences anywhere in code or content. The File
+Collections structure here doesn't depend on `modality` existing and is
+ready to receive it, but adding it is separate, undone work, not a
+side effect of this migration.
 
 ## dc:date — a single scalar, not a repeatable field
 
@@ -398,19 +453,27 @@ first one. Verified end-to-end afterward: added a throwaway page,
 confirmed the registry picked up its UUID on commit with no manual
 step, removed the page, confirmed the registry dropped it too.
 
-**Not yet connected**: `admin/config.yml` doesn't yet point any CMS
-field at these registries — `fr_ca`'s `relation` field currently uses a
-`relation` widget against the `en_ca` collection directly (see "CMS
-translation pairing"), which is a different, narrower mechanism than
-searching a shared registry. Wiring the registry into the CMS (new file
-collections for `works`/`expressions`, updating the `relation` widgets
-to point at those instead) is a real next step, not done here — this
-pass only fixed the registry generation itself and proved it works.
+**Registry lookup is manual, not widget-driven** — `admin/config.yml`'s
+`relation` field is a plain string on every page (see "CMS structure:
+File Collections" above), not a CMS widget querying the registry
+directly. An editor pairing a translation opens
+`content/_registry/works/<uuid>.md` (human-readable labels, searchable
+by title in any file browser) and copies the UUID by hand into the
+`relation` field. A true interactive picker — a CMS `relation` widget
+pointed at dedicated `works`/`expressions` file collections — remains a
+real possible improvement, not done here.
 
 ## Deliberately not yet built
 
 - No accessibility-modality axis (AAC rendering, plain-language pass,
   audio transcript) — same shape as locale/readability, not built yet.
+  A `modality` field and an Accessibility Statement page were both
+  described as already built in `docs/work-summary.md` and the SWOT
+  doc — confirmed directly against the real repo that neither exists;
+  see the correction notes at the top of `docs/work-summary.md` and
+  `docs/recommended-actions.md`.
+- No `dc:type` vs. "content type" documentation — also claimed done
+  elsewhere, also checked and not present.
 - No supersession/version-lineage or part-of/companion-to relations —
   those are a different kind of relatedness than translation and
   shouldn't be folded into `relation` the way locale pairing is.

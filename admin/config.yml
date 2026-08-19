@@ -18,131 +18,197 @@ logo_url: /assets/img/logos/logo-lockup-dark.svg
 media_folder: ""
 public_folder: ""
 
-collections:
-  - name: "en_ca"
-    label: "English (Canada)"
-    folder: "content/en-ca"
-    path: "{{slug}}/index"
-    slug: "{{slug}}"
-    create: true
-    format: "frontmatter"
-    extension: "md"
+# ---------------------------------------------------------------------
+# File Collections model (migrated from Folder Collections).
+#
+# WHY: Sveltia CMS cannot create new nested folders through its UI —
+# confirmed directly from the maintainer (github.com/sveltia/sveltia-cms
+# discussions #598): "a non-dev user wouldn't be able to create a new
+# folder in the sidebar... one of our unimplemented features... it will
+# be added to Sveltia CMS 2.0." The old Folder Collections
+# (path: "{{slug}}/index") could never reach two-level-deep pages like
+# about/commitments/index.md or about/legal/privacy.md — those pages
+# only existed because they were hand-placed outside the CMS. See
+# docs/swot--how-sveltia-cms-should-model-translation-and-page-structure.md
+# for the full analysis (including why native i18n doesn't solve this
+# either — this site's translated URL slugs, about/a-propos etc., can't
+# be expressed through the {{locale}} placeholder).
+#
+# WHAT CHANGES FOR EDITORS: every page below can be opened and edited
+# freely from the CMS sidebar. A genuinely NEW page — one that doesn't
+# exist yet — still requires a developer to add a `files:` entry here
+# first. That's a disclosed, real limitation of Sveltia CMS today, not
+# a workaround failure. Revisit if Sveltia ships nested collections
+# (2.0, not yet released as of the "Currency check" in the SWOT doc
+# above) — check that doc's "Currency check" section before assuming
+# this constraint still holds; this project ships frequently.
+#
+# WHAT DIDN'T CHANGE: the actual content/ file tree. Every path below
+# is identical to where these files already lived — only the CMS's
+# description of them changed.
+# ---------------------------------------------------------------------
+
+i18n:
+  structure: multiple_folders
+  locales: ["en-ca", "fr-ca"]
+  default_locale: "en-ca"
+
+# Home is the one page on this site where the en-ca and fr-ca slugs are
+# identical ("index") — confirmed by checking every real page's slug
+# pair (see the SWOT doc's table). That's what makes it the one place
+# Sveltia's {{locale}} placeholder and i18n: true genuinely apply, with
+# real side-by-side locale editing and relation: duplicate auto-copying
+# the shared Work UUID to both locale files. Every other page keeps a
+# translated slug (about/a-propos, team/équipe, ...), which the
+# {{locale}} placeholder cannot express — those stay as independent
+# per-locale entries below, paired the same way they always have been:
+# a typed/copied `relation` UUID, looked up via content/_registry/.
+singletons:
+  - name: "home"
+    label: "Home"
+    file: "content/{{locale}}/index.md"
+    i18n: true
     fields:
-      - { label: "Title (dc:title)", name: "title", widget: "string" }
-      - { label: "Nav label", name: "navTitle", widget: "string", required: false, hint: "Falls back to Title if left blank." }
-      - { label: "Nav order", name: "order", widget: "number", required: false, default: 100, hint: "Lower numbers sort first among siblings." }
+      - { label: "Title (dc:title)", name: "title", widget: "string", i18n: true }
+      - { label: "Nav label", name: "navTitle", widget: "string", required: false, i18n: true, hint: "Falls back to Title if left blank." }
+      - { label: "Nav order", name: "order", widget: "number", required: false, default: 0, i18n: duplicate, hint: "Lower numbers sort first among siblings." }
       - label: "Identifier (dc:identifier)"
         name: "identifier"
         widget: "string"
         required: false
+        i18n: true
         pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
-        hint: "Unique to THIS file (this Expression). Generate a fresh UUID per new page — this is the English page, so there's nothing to copy from yet."
+        hint: "Unique to THIS locale's file (this Expression) — different UUID per locale, unlike Relation below."
       - label: "Relation (dc:relation)"
         name: "relation"
         widget: "string"
         required: false
+        i18n: duplicate
         pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
-        hint: "The shared Work UUID. If this Work will also exist in French, paste a fresh urn:uuid:... here — the French entry will search for this page by title and copy it automatically, so you only type it once. Local convention: this field means Work-pairing only, not general 'related resource' — unqualified Dublin Core has no way to sub-type it, so don't repurpose it for see-also/part-of links."
-      - label: "Not translated on purpose"
-        name: "localeExclusive"
-        widget: "boolean"
-        required: false
-        default: false
-        hint: "On, if this page will never have a fr-ca counterpart (e.g. English-only press coverage). Leave off if a translation is just pending — the build only warns about the pending case."
-
-      # ---- Remaining unqualified Dublin Core elements (DCMES 1.1). ----
-      # All optional — fill in whatever's true and known, leave the rest
-      # blank. dc:language isn't here: it's derived automatically from
-      # the locale (en-CA for this collection).
-      - { label: "Creator (dc:creator)", name: "creator", widget: "string", required: false, hint: "Primary author or team responsible for this page." }
-      - label: "Subject (dc:subject)"
-        name: "subject"
-        widget: "list"
-        required: false
-        hint: "Keywords/topics, one per line. Renders as one dc.subject tag per entry."
-      - { label: "Description (dc:description)", name: "description", widget: "text", required: false, hint: "A short summary of this page's content." }
-      - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false }
-      - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false, hint: "Someone other than the primary creator who contributed to this page." }
-      - label: "Date (dc:date)"
-        name: "date"
-        widget: "date"
-        required: false
-        date_format: "YYYY-MM-DD"
-        hint: "Leave blank to use this page's actual first-commit date automatically (recommended). Only set this to override that — e.g. backdating migrated content."
-      - { label: "Type (dc:type)", name: "type", widget: "string", required: false, hint: "Nature of the content, e.g. Text, Image, Sound, Dataset — see the DCMI Type Vocabulary." }
-      - { label: "Format (dc:format)", name: "format", widget: "string", required: false, hint: "IANA media type, e.g. text/html." }
-      - { label: "Source (dc:source)", name: "source", widget: "string", required: false, hint: "A related resource this page is derived from, e.g. a URI or citation." }
-      - { label: "Coverage (dc:coverage)", name: "coverage", widget: "string", required: false, hint: "Spatial or temporal scope, e.g. Canada, or 2020–2026." }
-      - { label: "Rights (dc:rights)", name: "rights", widget: "string", required: false, hint: "Copyright or rights statement." }
-
+        hint: "The shared Work UUID — auto-copied to both locales (i18n: duplicate), since Home is definitionally one Work realized in two languages. Local convention: this field means Work-pairing only, not general 'related resource'."
+      - { label: "Creator (dc:creator)", name: "creator", widget: "string", required: false, i18n: true }
+      - { label: "Subject (dc:subject)", name: "subject", widget: "list", required: false, i18n: true, hint: "Keywords/topics, one per line." }
+      - { label: "Description (dc:description)", name: "description", widget: "text", required: false, i18n: true }
+      - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false, i18n: true }
+      - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false, i18n: true }
+      - { label: "Date (dc:date)", name: "date", widget: "date", required: false, date_format: "YYYY-MM-DD", i18n: true, hint: "Leave blank to use this page's actual first-commit date automatically (recommended)." }
+      - { label: "Type (dc:type)", name: "type", widget: "string", required: false, i18n: duplicate, hint: "Nature of the content, e.g. Text — see the DCMI Type Vocabulary." }
+      - { label: "Format (dc:format)", name: "format", widget: "string", required: false, i18n: duplicate }
+      - { label: "Source (dc:source)", name: "source", widget: "string", required: false, i18n: true }
+      - { label: "Coverage (dc:coverage)", name: "coverage", widget: "string", required: false, i18n: true }
+      - { label: "Rights (dc:rights)", name: "rights", widget: "string", required: false, i18n: true }
       - label: "Hero image"
         name: "hero"
         widget: "image"
         required: false
+        i18n: true
         media_folder: "index.assets"
         public_folder: "index.assets"
-      - { label: "Body", name: "body", widget: "markdown" }
+      - { label: "Body", name: "body", widget: "markdown", i18n: true }
+
+# Shared field list for every page below (everything except the Home
+# singleton above, which needs its own i18n-annotated variant). Defined
+# once via a YAML anchor rather than duplicated ~10 times — the anchor
+# lives under this throwaway key, which Sveltia/Decap ignore as an
+# unrecognized top-level key (standard, widely-used pattern for
+# Decap-compatible configs; still worth a smoke test against a live
+# instance rather than assumed, per this project's own house rule about
+# unverified CMS behavior claims).
+_page_fields: &page_fields
+  - { label: "Title (dc:title)", name: "title", widget: "string" }
+  - { label: "Nav label", name: "navTitle", widget: "string", required: false, hint: "Falls back to Title if left blank." }
+  - { label: "Nav order", name: "order", widget: "number", required: false, default: 100, hint: "Lower numbers sort first among siblings." }
+  - label: "Identifier (dc:identifier)"
+    name: "identifier"
+    widget: "string"
+    required: false
+    pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+    hint: "Unique to THIS file (this Expression). Generate a fresh UUID per new page."
+  - label: "Relation (dc:relation)"
+    name: "relation"
+    widget: "string"
+    required: false
+    pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+    hint: "The shared Work UUID. Look up the other locale's page in content/_registry/works/ (or search by title — every page's Work is listed there with a human-readable label) and copy its UUID here to pair this page as a translation. If this is a brand-new Work with no other-locale page yet, paste a fresh urn:uuid:... instead. Symmetric on every locale on purpose — Sveltia's relation widget can only ever select an EXISTING entry, never originate a new UUID, so it can't support any locale originating a new Work equally; a plain field can. Local convention: this field means Work-pairing only, not general 'related resource'."
+  - label: "Not translated on purpose"
+    name: "localeExclusive"
+    widget: "boolean"
+    required: false
+    default: false
+    hint: "On, if this page will never have a counterpart in another locale. Leave off if a translation is just pending — the build only warns about the pending case."
+  - { label: "Creator (dc:creator)", name: "creator", widget: "string", required: false, hint: "Primary author or team responsible for this page." }
+  - label: "Subject (dc:subject)"
+    name: "subject"
+    widget: "list"
+    required: false
+    hint: "Keywords/topics, one per line. Renders as one dc.subject tag per entry."
+  - { label: "Description (dc:description)", name: "description", widget: "text", required: false, hint: "A short summary of this page's content." }
+  - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false }
+  - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false, hint: "Someone other than the primary creator who contributed to this page." }
+  - label: "Date (dc:date)"
+    name: "date"
+    widget: "date"
+    required: false
+    date_format: "YYYY-MM-DD"
+    hint: "Leave blank to use this page's actual first-commit date automatically (recommended). Only set this to override that — e.g. backdating migrated content."
+  - { label: "Type (dc:type)", name: "type", widget: "string", required: false, hint: "Nature of the content, e.g. Text, Image, Sound, Dataset — see the DCMI Type Vocabulary." }
+  - { label: "Format (dc:format)", name: "format", widget: "string", required: false, hint: "IANA media type, e.g. text/html." }
+  - { label: "Source (dc:source)", name: "source", widget: "string", required: false, hint: "A related resource this page is derived from, e.g. a URI or citation." }
+  - { label: "Coverage (dc:coverage)", name: "coverage", widget: "string", required: false, hint: "Spatial or temporal scope, e.g. Canada, or 2020–2026." }
+  - { label: "Rights (dc:rights)", name: "rights", widget: "string", required: false, hint: "Copyright or rights statement." }
+  - label: "Hero image"
+    name: "hero"
+    widget: "image"
+    required: false
+    media_folder: "index.assets"
+    public_folder: "index.assets"
+  - { label: "Body", name: "body", widget: "markdown" }
+
+collections:
+  - name: "en_ca"
+    label: "English (Canada)"
+    files:
+      - name: "about"
+        label: "About"
+        file: "content/en-ca/about/index.md"
+        fields: *page_fields
+      - name: "commitments"
+        label: "Commitments"
+        file: "content/en-ca/about/commitments/index.md"
+        fields: *page_fields
+      - name: "privacy"
+        label: "Privacy"
+        file: "content/en-ca/about/legal/privacy.md"
+        fields: *page_fields
+      - name: "team"
+        label: "Team"
+        file: "content/en-ca/team/index.md"
+        fields: *page_fields
+      - name: "careers"
+        label: "Careers"
+        file: "content/en-ca/careers/index.md"
+        fields: *page_fields
+      - name: "press"
+        label: "Press"
+        file: "content/en-ca/press/index.md"
+        fields: *page_fields
 
   - name: "fr_ca"
     label: "Français (Canada)"
-    folder: "content/fr-ca"
-    path: "{{slug}}/index"
-    slug: "{{slug}}"
-    create: true
-    format: "frontmatter"
-    extension: "md"
-    fields:
-      - { label: "Title (dc:title)", name: "title", widget: "string" }
-      - { label: "Nav label", name: "navTitle", widget: "string", required: false, hint: "Falls back to Title if left blank." }
-      - { label: "Nav order", name: "order", widget: "number", required: false, default: 100, hint: "Lower numbers sort first among siblings." }
-      - label: "Identifier (dc:identifier)"
-        name: "identifier"
-        widget: "string"
-        required: false
-        pattern: ["^urn:uuid:[0-9a-fA-F-]{36}$", "Must look like urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
-        hint: "Unique to THIS file (this Expression) — a fresh UUID, different from the Relation field below."
-      - label: "Relation (dc:relation) — link to the English page"
-        name: "relation"
-        widget: "relation"
-        collection: "en_ca"
-        search_fields: ["title", "relation"]
-        value_field: "relation"
-        display_fields: ["title"]
-        required: false
-        hint: "Search by English title. Selecting a page copies its Work UUID here, pairing this fr-ca page as that page's translation. If there's no English page yet — this is a brand-new, French-first Work — leave this blank and paste a fresh urn:uuid:... by hand instead. Local convention: this field means Work-pairing only, not general 'related resource'."
-      - label: "Not translated on purpose"
-        name: "localeExclusive"
-        widget: "boolean"
-        required: false
-        default: false
-        hint: "On, if this page will never have an en-ca counterpart. Leave off if a translation is just pending — the build only warns about the pending case."
-
-      # ---- Remaining unqualified Dublin Core elements (DCMES 1.1). ----
-      - { label: "Creator (dc:creator)", name: "creator", widget: "string", required: false, hint: "Auteur ou équipe principalement responsable de cette page." }
-      - label: "Subject (dc:subject)"
-        name: "subject"
-        widget: "list"
-        required: false
-        hint: "Mots-clés, un par ligne. Un tag dc.subject par entrée."
-      - { label: "Description (dc:description)", name: "description", widget: "text", required: false }
-      - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false }
-      - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false }
-      - label: "Date (dc:date)"
-        name: "date"
-        widget: "date"
-        required: false
-        date_format: "YYYY-MM-DD"
-        hint: "Laisser vide pour utiliser automatiquement la date du premier commit de cette page (recommandé)."
-      - { label: "Type (dc:type)", name: "type", widget: "string", required: false, hint: "Voir le vocabulaire DCMI Type." }
-      - { label: "Format (dc:format)", name: "format", widget: "string", required: false, hint: "Type de média IANA, ex. text/html." }
-      - { label: "Source (dc:source)", name: "source", widget: "string", required: false }
-      - { label: "Coverage (dc:coverage)", name: "coverage", widget: "string", required: false }
-      - { label: "Rights (dc:rights)", name: "rights", widget: "string", required: false }
-
-      - label: "Hero image"
-        name: "hero"
-        widget: "image"
-        required: false
-        media_folder: "index.assets"
-        public_folder: "index.assets"
-      - { label: "Body", name: "body", widget: "markdown" }
+    files:
+      - name: "about"
+        label: "À propos"
+        file: "content/fr-ca/a-propos/index.md"
+        fields: *page_fields
+      - name: "commitments"
+        label: "Engagements"
+        file: "content/fr-ca/a-propos/engagements/index.md"
+        fields: *page_fields
+      - name: "privacy"
+        label: "Confidentialité"
+        file: "content/fr-ca/a-propos/mentions-legales/confidentialite.md"
+        fields: *page_fields
+      - name: "team"
+        label: "Équipe"
+        file: "content/fr-ca/equipe/index.md"
+        fields: *page_fields

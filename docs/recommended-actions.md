@@ -1,5 +1,15 @@
 # Recommended course of action
 
+> **Correction, added later**: §2 below claimed the File Collections
+> migration was "already implemented and verified" — checked directly
+> against the real repo, it wasn't; `admin/config.yml` was still Folder
+> Collections. It has *since* been done for real (see `README.md`'s
+> "CMS structure: File Collections" section). §1's registry item had
+> the same problem — `npm run registry` didn't even exist in
+> `package.json` at the time, which is the exact bug a real person hit
+> running this document's own advice. §3 and §4 below weren't re-checked
+> as part of this correction; verify before trusting either.
+
 Prioritized by what blocks real editorial use of the CMS first, and what
 can wait. "Done" items from `work-summary.md` aren't repeated here.
 
@@ -21,8 +31,11 @@ can wait. "Done" items from `work-summary.md` aren't repeated here.
 
 ## 2. Recommended: adopt the File Collections model as the standing convention
 
-Already implemented and verified (see `work-summary.md` §6 and the full
-SWOT). The one process change this requires going forward:
+**Now actually implemented and verified** — see `README.md`'s "CMS
+structure: File Collections" section for the real version, including
+what was checked (every declared path confirmed against the real
+filesystem, YAML anchor resolution confirmed programmatically). The one
+process change this requires going forward:
 
 - **A genuinely new page always means a developer adds a `files:` entry
   to `admin/config.yml` first.** This isn't a workaround to route around
