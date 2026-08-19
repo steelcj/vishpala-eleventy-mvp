@@ -1,16 +1,13 @@
 #!/bin/sh
+# .githooks/pre-commit
 #
-# Rebuilds the UUID registry (content/_registry/) from current content
-# front matter before every commit, and stages the result so the
-# registry can never drift out of sync with the content that produced
-# it — no CI dependency, works identically for every contributor and
-# every host.
+# Regenerates content/_registry/ (works + expressions) from the current
+# state of content/**/*.md front matter, then stages the result — so
+# every commit that touches content also carries an up-to-date registry,
+# never a stale one.
 #
-# Installed via `git config core.hooksPath .githooks`, which the
-# `prepare` script in package.json sets automatically on `npm install`.
+# Activated by `npm run prepare` (or a fresh `npm install`), which sets
+# git's core.hooksPath to .githooks/. See scripts/setup-git-hooks.js.
 
-set -e
-
-node scripts/build-registry.js
-
+node scripts/build-registry.js || exit 1
 git add content/_registry

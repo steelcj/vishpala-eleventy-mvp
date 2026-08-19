@@ -1,152 +1,436 @@
-# UUID Registry — setup instructions
+# Vishpala — Eleventy + Sveltia CMS MVP
 
-This adds a generated, git-tracked registry that maps your `dc:identifier` /
-`dc:relation` UUIDs to human-readable labels, so Sveltia CMS can offer a
-searchable picker (by title) instead of requiring editors to paste raw
-UUIDs when linking a page to an existing Work.
+Static site built by [Eleventy](https://www.11ty.dev/), authored through
+[Sveltia CMS](https://github.com/sveltia/sveltia-cms), with internationalization
+modeled through Dublin Core `identifier`/`relation` front matter rather than
+a locale-pairing feature baked into the CMS or the framework.
 
-Nothing here is hand-maintained. The registry is fully derived from the
-`title`, `identifier`, and `relation` front matter already on your content
-files, rebuilt automatically before every commit.
+## Run it
 
-## What's in this zip
-
-```
-scripts/build-registry.js    the generator — reads content/, writes content/_registry/
-.githooks/pre-commit         runs the generator and stages the result before each commit
-README.md                    this file
+```sh
+npm install
+npm start      # dev server with rebuild-on-save, http://localhost:8080
+npm run build  # writes ./_site
 ```
 
-Unzip into your project root so `scripts/` and `.githooks/` land alongside
-your existing `content/`, `.eleventy.js`, and `admin/` directories.
+## The content model
 
-## One-time setup
-
-**1. Install the two dependencies the script needs:**
-
-```bash
-npm install --save-dev glob gray-matter
+```
+content/
+├── en-ca/
+│   ├── en-ca.json          ← directory data: locale, language, layout
+│   ├── index.md
+│   └── about/
+│       ├── index.md
+│       ├── index.assets/hero.svg
+│       └── legal/
+│           ├── privacy.md
+│           └── privacy.assets/diagram.svg
+└── fr-ca/                  ← same shape, mirrored (not identical) content
 ```
 
-(`gray-matter` may already be present transitively via `@11ty/eleventy` —
-installing it explicitly as a direct devDependency avoids relying on that.)
+Two conventions, both read straight off the filesystem — nothing is
+hand-registered:
 
-**2. Make the hook executable** (the zip should preserve this, but confirm):
+- **A folder's own page is `index.md`.** `about/index.md` is the page for
+  `/about/`. Its sibling `index.assets/` folder holds its images, matched by
+  the `index` filename stem.
+- **A leaf page that has no children of its own is `name.md` directly
+  inside its parent folder**, e.g. `legal/privacy.md`. Its assets live in
+  `privacy.assets/`, next to it, matched by the `privacy` stem. `legal/`
+  itself has no `index.md` — it's a pure grouping folder, and still shows
+  up in the nav as an unlinked section label so `privacy` stays reachable.
 
-```bash
-chmod +x .githooks/pre-commit
-```
-
-**3. Add a `prepare` script to `package.json`** so every clone points git
-at the versioned hooks folder automatically on `npm install`:
-
-```json
-{
-  "scripts": {
-    "prepare": "git config core.hooksPath .githooks"
-  }
-}
-```
-
-Then run `npm install` once yourself to activate it in your current
-checkout (or run `git config core.hooksPath .githooks` directly).
-
-**4. Tell Eleventy not to build the registry as pages.** In `.eleventy.js`,
-inside `module.exports = function (eleventyConfig) { ... }`, add:
-
-```js
-eleventyConfig.ignores.add("content/_registry/**");
-```
-
-**5. Add two file collections to `admin/config.yml`** — these are what the
-`relation` widget searches against:
+Every `.md` file carries two Dublin Core fields:
 
 ```yaml
-  - name: "registry_works"
-    label: "Registry — Works (internal)"
-    folder: "content/_registry/works"
-    format: "frontmatter"
-    extension: "md"
-    create: false
-    delete: false
-    editor:
-      preview: false
-    fields:
-      - { label: "UUID", name: "uuid", widget: "string" }
-      - { label: "Label", name: "label", widget: "string" }
-      - { label: "Locales", name: "locales", widget: "object", required: false }
-
-  - name: "registry_expressions"
-    label: "Registry — Expressions (internal)"
-    folder: "content/_registry/expressions"
-    format: "frontmatter"
-    extension: "md"
-    create: false
-    delete: false
-    editor:
-      preview: false
-    fields:
-      - { label: "UUID", name: "uuid", widget: "string" }
-      - { label: "Label", name: "label", widget: "string" }
-      - { label: "Locale", name: "locale", widget: "string" }
-      - { label: "Path", name: "path", widget: "string" }
+title: "About"
+identifier: "urn:uuid:8a1e2f3b-…"   # unique to THIS file (this Expression)
+relation: "urn:uuid:ffdca22b-…"     # shared Work UUID — same on every
+                                     # locale's version of this page
 ```
 
-**6. Switch the `relation` field on your `en_ca` / `fr_ca` collections**
-from a plain string to a `relation` widget:
+`identifier` names the Expression (this specific realization — this
+language, this file). `relation` names the Work it realizes. Two files in
+different locale folders that share the same `relation` are treated as
+translations of one another; that's the entire mechanism the language
+switcher runs on. Nothing about locale pairing lives in filenames, folder
+names, or CMS config — it's just a shared UUID in front matter, so it holds
+up if you later add more Expressions of the same Work (a grade-7 rewrite,
+an AAC rendering) without redesigning the pairing mechanism.
 
-```yaml
-      - label: "Relation (dc:relation)"
-        name: "relation"
-        widget: "relation"
-        required: false
-        collection: "registry_works"
-        search_fields: ["label", "uuid"]
-        value_field: "uuid"
-        display_fields: ["label"]
-        hint: "Search by title to link this page to an existing Work. Leave blank if this is the first page of a brand-new Work."
+## What the build derives from the filesystem
+
+`.eleventy.js` + `_11ty/nav-tree.js`:
+
+- **`collections.navTrees[locale]`** — a nested tree built from every
+  page's URL, one per locale, used by `_includes/partials/nav.njk` to
+  render the sidebar menu. Add a folder, get a nav entry; no manual menu
+  file to maintain. Sibling ordering is `order` (front matter, default
+  last) then alphabetical by title.
+- **`collections.byWork`** — every page grouped by its `relation` UUID,
+  used by `_includes/partials/language-switcher.njk` to link a page to its
+  sibling Expressions in other locales.
+- **One deliberate permalink override** (`content/content.11tydata.js`):
+  Eleventy's default "pretty URL" behavior would turn `privacy.md` into
+  `privacy/index.html`, a directory deeper than `privacy.assets/`, which
+  breaks the relative image path written in the source. Leaf (non-index)
+  pages are instead output flat as `privacy.html`, staying in the same
+  directory as their own assets folder. `index.md` pages already avoid
+  this problem by default and are left alone.
+
+## Sveltia CMS (`admin/config.yml`)
+
+One folder collection per locale (`en_ca`, `fr_ca`), sharing a field set
+via a YAML anchor. `identifier` and `relation` are exposed as plain string
+fields with hints explaining what to put in them — generating and pairing
+UUIDs is a manual editorial step in this MVP, not automated. A field-level
+`hero` image widget demonstrates the per-entry `index.assets/` pattern.
+
+**Scoped out of this MVP, on purpose:** the CMS always creates new pages
+in the `slug/index.md` shape. The `legal/privacy.md`-style flat leaf
+pattern is something Eleventy reads and renders correctly (see above) but
+the CMS doesn't currently *author* — that'd need either a second
+"leaf pages" collection per locale or custom UI, and wasn't worth adding
+before the core read/build/nav loop was solid. `backend.name: git-gateway`
+is a placeholder; point it at `github`/`gitlab`/whatever actually hosts
+this repo, and set `repo`.
+
+The `media_folder`/`public_folder` relative-path setup for per-entry
+`index.assets/` folders is written the way current Decap-compatible docs
+describe it, but that resolution behavior has changed across CMS versions
+before — worth a smoke test against a real Sveltia CMS instance rather
+than trusting it blind.
+
+## SEO: canonical + hreflang (`_includes/partials/i18n-meta.njk`)
+
+Every page emits a self-referencing `<link rel="canonical">` and, when it
+has a `relation`, one `<link rel="alternate" hreflang="…">` per sibling
+Expression plus one `hreflang="x-default"` pointing at the Work's default
+locale (`_11ty/site-config.js`, currently `en-ca`). All of it comes from
+`collections.byWork` — the same collection the visible language switcher
+reads — so the machine-readable linkage can't drift from what's shown in
+the UI. `site.url` is currently set to `https://vishpala.com` in
+`site-config.js` — confirm that's the real production origin before
+this goes live.
+
+## Missing-translation handling (`partials/language-switcher.njk`)
+
+The switcher now enumerates every locale that exists anywhere on the
+site (`collections.locales`), not just the ones with an Expression of the
+current Work. A locale with no Expression renders as a visibly muted
+link to that locale's home page, with a title/aria note explaining it's
+not translated yet — instead of just quietly not appearing. Front matter
+`localeExclusive: true` opts a page out of that treatment entirely (for
+content that will never have a translation, vs. content that's simply
+pending one) — see `content/en-ca/careers/index.md` (pending, shows the
+fallback + build warning) vs. `content/en-ca/press/index.md`
+(`localeExclusive`, shows neither).
+
+## Build-time validation (`_11ty/validate.js`)
+
+Runs on every build via the `i18nValidation` collection. Catches:
+
+- malformed `identifier`/`relation` values (must match `urn:uuid:…`)
+- an `identifier` reused across more than one file
+- a `relation` with more than one Expression in the *same* locale
+  (probably not what you meant)
+- a `relation` that only exists in one locale and isn't marked
+  `localeExclusive` — usually means a translation is pending, or a typo
+  broke the pairing on the other locale's page
+
+All of the above print as `[i18n] warning:` / `[i18n] error:` to the
+console. Errors don't fail the build by default (so a typo doesn't block
+someone from previewing their edit) — set `ELEVENTY_STRICT=1` to make
+errors throw, e.g. in CI: `ELEVENTY_STRICT=1 npm run build`.
+
+## CMS translation pairing (`admin/config.yml`)
+
+`identifier` and `relation` are now pattern-validated at entry time
+(`urn:uuid:…`) in both collections, and there's a `localeExclusive`
+toggle matching the front matter field above. For pairing: `fr_ca`'s
+`relation` field is a Decap/Sveltia `relation` widget that searches
+`en_ca` entries by title and copies the matched entry's `relation` value
+in — an editor creating the French page picks the English page by name
+instead of retyping a UUID. This is scoped one direction only (French
+looks up English) on the assumption English is usually authored first;
+a brand-new French-first Work still needs a hand-typed UUID, per the
+field's hint text. Flipping it to work both ways would need either a
+second field or a custom widget — not built here.
+
+## dc:date — a single scalar, not a repeatable field
+
+Unlike `subject`, `date` isn't a list. Multiple dates were considered
+(Plone's HTML output uses `DC.date.modified` / `DC.date.created` — a
+real precedent, but it's Plone's own house convention layered on the
+element name, not `dcterms:`, and still a form of qualification we
+decided against). Unqualified `dc:date` has no built-in way to say
+*which* date a value represents, and DCMI's own definition frames it as
+one date, "typically associated with the creation or availability of the
+resource" — so this project uses exactly one: creation.
+
+It's derived automatically, not hand-typed: `content/content.11tydata.js`
+sets a directory-wide default of `date: "git Created"`, Eleventy's
+built-in mechanism for resolving a page's date from its *first* git
+commit (not the plain filesystem-birthtime default, which resets on
+every fresh clone/CI checkout and isn't a meaningful "creation date"
+once this leaves one machine). `partials/dc-meta.njk` reads the
+resolved value from `page.date` — not the bare `date` variable, which
+stays as the literal string `"git Created"` in the data cascade; only
+`page.date` is where Eleventy actually resolves it. A page can still
+override this with an explicit `date:` in its own front matter (the
+normal data cascade — front matter beats directory data), which the CMS
+exposes as an optional field for cases like backdating migrated content.
+
+**Caveat that matters before you trust the build output**: `"git
+Created"` only resolves meaningfully in an actual git repository with
+real commit history. In a freshly unzipped copy with no `.git` folder —
+like this delivery, right now — Eleventy can't read git log and falls
+back to `Date.now()`, so every page's `dc.date` will show today's date
+and change on every rebuild. It becomes meaningful once the site is
+pushed to whatever backs the Sveltia CMS `backend.name` and built from
+that real history.
+
+## Full unqualified Dublin Core (`_11ty/dublin-core.js`, `partials/dc-meta.njk`)
+
+Every page can now carry any of the 15 unqualified DCMES 1.1 elements as
+plain front matter — `title`, `creator`, `subject` (repeatable — a list,
+one `<meta name="dc.subject">` per entry), `description`, `publisher`,
+`contributor`, `date`, `type`, `format`, `identifier`, `source`,
+`language`, `relation`, `coverage`, `rights` — all optional except
+`title`. Whatever's present renders as `<meta name="dc.X" content="…">`
+in `<head>`; whatever's absent renders nothing (see `content/en-ca/about/`
+for a page using most of them, vs. `content/en-ca/team/` using none).
+`dc.language` is derived from the locale's `hreflang` rather than typed
+per page.
+
+**Deliberately unqualified — no `dcterms:` refinements** (no
+`isVersionOf`/`hasVersion`, `isPartOf`/`hasPart`, `replaces`, split
+`created`/`modified`, etc.). That's a real constraint, not just an
+omission: unqualified `dc:relation` has no way to sub-type what kind of
+relation it is. This site defines a local convention instead — `relation`
+means Work-pairing (the same locale-switcher/`byWork` mechanism as
+before) and nothing else. Don't repurpose it for "see also" or "part of"
+links; there's no field-level way to keep those apart from translation
+pairing once they're mixed into one value, and `collections.byWork`
+assumes every `relation` means exactly one thing. If those other relation
+types (supersession, part-of, companion-to) become necessary later,
+they'll need either their own front matter field under a project-specific
+name, or a revisit of the qualified-terms decision — not reuse of this
+field.
+
+The 12 elements beyond title/identifier/relation have no cross-file
+validation (unlike identifier/relation, they're free-text with no
+structural relationship to check) — `_11ty/validate.js` wasn't extended
+for them, on the same "does this axis earn its cost" basis as everything
+else in this project.
+
+## Design system (`assets/`)
+
+```
+assets/
+├── css/site.css                    — single stylesheet; see below for why it's not split further yet
+├── fonts/
+│   ├── public-sans/                 — body/UI face, latin subset, weights 400/400i/600/700
+│   └── ibm-plex-mono/               — mono accent, latin subset, weights 400/500
+└── img/logos/
+    ├── favicon.svg                  — Vishpala mark, supplied
+    ├── logo-lockup-dark.svg         — BLACK text — despite the "-dark" name, this is the
+    │                                   one for LIGHT backgrounds (named for the text's own
+    │                                   weight, not the surface it's meant for) — currently
+    │                                   in use in the header, since the page is light
+    └── logo-lockup.svg              — WHITE text — for DARK backgrounds; unused until dark
+                                        mode exists (see "Deliberately not yet built")
 ```
 
-**7. Run it once by hand** to generate the initial registry before your
-first commit:
+**Brand assets are supplied files, not design decisions made here.**
+`favicon.svg`, `logo-lockup.svg`, `logo-lockup-dark.svg`, and the About
+page's illustration (`content/*/index.assets/about-work.svg` — a real
+De Stijl composition, blue/yellow/red blocks divided by black rules)
+were provided directly and used as-is, colors and all — not recolored
+or reinterpreted. `--accent` (`#0033cc`) in `site.css` is the exact blue
+from the logo, not an invented placeholder — replaces an earlier teal
+that was picked before this project had a real brand to match.
 
-```bash
-node scripts/build-registry.js
-git add content/_registry scripts .githooks package.json .eleventy.js admin/config.yml
-git commit -m "feat: add generated UUID registry for CMS relation linking"
-```
+**Fonts are fully self-hosted, zero external requests.** Vendored from
+`@fontsource/public-sans` and `@fontsource/ibm-plex-mono` (SIL OFL 1.1 —
+license text sits alongside the font files in each subfolder). Only the
+`latin` subset was kept — it covers accented French characters (é, è,
+ç, œ, etc.) for en-CA/fr-CA; `latin-ext` (Central/Eastern European) was
+left out to keep the payload small. Only the weights actually used were
+vendored (4 files for Public Sans, 2 for the mono face) rather than the
+full family — trimming this took a manual pass through the package's
+`files/` directory, not a blind `npm install` + copy-everything.
 
-## Day-to-day
+**Type direction:** Public Sans for body/UI — designed for the U.S.
+federal design system (USWDS) specifically for legible, trustworthy
+civic service. This was picked before the project had a confirmed name,
+on a bet about the site's likely character (bilingual, standards-driven,
+archival) — and turned out to line up well with Vishpala's own stated
+focus on accessibility and infrastructure, rather than needing to change
+once the real brand landed. IBM Plex Mono is reserved specifically for
+`urn:uuid:`/`dc:` values (`.meta-value`/`code` styling in `site.css`) —
+the one deliberate signature touch, since this site foregrounds its own
+metadata more than most sites do.
 
-Nothing to do. Every `git commit` runs the hook, which regenerates
-`content/_registry/` from whatever `title` / `identifier` / `relation`
-values exist in `content/` at that moment, and stages the result into the
-same commit. The registry can never drift out of sync with the content
-that produced it, because it's rebuilt from scratch (not merged) every
-time — the same "regenerate, don't append" hygiene as the MVP's zip
-packaging fix.
+**Why `css/` isn't split into `base/`/`components/` yet:** one file is
+still easy to navigate at this size (~360 lines). Worth revisiting once
+it grows past that, not before.
 
-## Caveats worth knowing about
+## Responsive layout + mobile nav (`site.css`)
 
-- **The hook only runs on commits made through local git.** If Sveltia's
-  git-gateway backend commits directly to the remote (rather than through
-  a contributor's local git client), those commits bypass the hook
-  entirely and the registry won't reflect that change until someone next
-  commits locally. Worth confirming how your backend is configured.
-- **`prepare` runs on every `npm install`**, repointing `core.hooksPath`
-  unconditionally. Harmless here, but mention it in your own README if
-  anyone on the project relies on other local hooks.
-- **`create: false` / `delete: false` stop editors from hand-adding
-  registry entries through the CMS UI**, but Decap/Sveltia doesn't have a
-  first-class "hide this collection from the sidebar" flag as far as
-  documented — worth checking current Sveltia docs if you want the
-  registry collections fully invisible rather than just read-only.
-- **A brand-new Work has no registry entry until its first page is
-  committed.** That's intentional: the first Expression originates the
-  Work; a second Expression (translation) or a future Manifestation
-  searches and links to it.
-- **`dc:identifier` itself stays a plain string**, not a relation widget —
-  it's a page declaring its own UUID, not referencing someone else's. The
-  `registry_expressions` collection exists for later, when an
-  assets/Manifestations collection needs to link back to "which
-  Expression does this file realize" via search.
+Mobile-first, two breakpoints. Revised from an earlier JS-driven
+hamburger-drawer version after checking a reference implementation
+(vishpala.netlify.app) that solves this with plain HTML instead —
+worth doing that check before building custom JS for something the
+platform already provides:
+
+- **< 700px**: the full nested nav tree lives inside a native
+  `<details>/<summary>` disclosure ("Menu"), positioned above the main
+  content. Opening it pushes content down in normal document flow —
+  no backdrop, nothing covering the page. The separate horizontal
+  header menu is hidden here; the disclosure's full tree already
+  contains everything it would show.
+- **700–959px**: header menu (top-level sections) becomes visible
+  inline *in addition to* the disclosure, which keeps carrying the full
+  tree. (An earlier version of this hid the full tree entirely in this
+  range, leaving nested pages like `about/legal/privacy` unreachable
+  between 700–959px — fixed here.)
+- **≥ 960px**: the disclosure is replaced by a persistent sidebar
+  column (the original two-column layout); header menu stays visible.
+
+**No JavaScript at all for navigation** — `<details>/<summary>` is
+native HTML: keyboard-operable, announced correctly by screen readers,
+works identically whether JS loads or not, and needs no focus-trap or
+Escape-key handling because nothing about it is modal. The earlier
+`assets/js/nav.js` (custom drawer open/close/focus logic) and the
+`no-js`/`js` class-swap it depended on have been deleted — there's
+nothing left for them to enhance.
+
+**Not built**: no fine-grained breakpoint between 960px and very wide
+screens (`--content-max: 960px` just centers everything past that
+point, doesn't reflow further).
+
+## Footer (`partials/footer.njk`)
+
+Reuses `partials/header-nav.njk` directly against the same `tree`
+variable already in scope in `base.njk`, rather than duplicating the
+top-level-links loop — same generated-not-hand-maintained principle as
+the header and sidebar. Below that: a copyright line (`buildYear` is
+computed once per build via `addGlobalData`, not hand-typed) and a
+short colophon crediting Eleventy and Dublin Core. `site.copyrightHolder`
+lives in `_11ty/site-config.js` alongside `url`/`defaultLocale` — same
+single-source-of-truth pattern as everything else there.
+
+## Commitments page (`content/*/about/commitments|engagements/`)
+
+A real content addition, not scaffolding — distilled from Christopher's
+Universal Cake Evaluation Metrics rubric (`docs/`) into plain public
+language: Accessibility, Sustainability, Sovereignty, Data Portability,
+Longevity. Paired across locales the normal way (shared `relation`
+UUID, different URL slugs — `commitments` vs `engagements` — exactly
+what that mechanism exists for). Nested under About via the ordinary
+folder+`order` convention, no new code.
+
+**Scoped as one page with five sections, not five separate pages** —
+matches the rubric's five pillars but not (yet) Vishpala's real About
+structure, which has each commitment as its own dated, versionable page
+("In force" since a specific date). Splitting these out later is
+straightforward if wanted; started smaller deliberately rather than
+generating five pages of content in one pass.
+
+**This is drafted content, not confirmed copy.** It's grounded in
+Christopher's own rubric rather than invented from nothing, but it's
+still Claude writing public statements on behalf of a real
+organization — it hasn't been reviewed or approved as accurate. Treat
+it as a strong first draft, not a publish-ready commitment.
+
+**`docs/`** holds two internal documents, not public site content: the
+source rubric (`universal-cake-evaluation-metrics-v0-3-1.md`) and a
+self-evaluation of this actual build against it
+(`self-evaluation-vishpala-site-v0-1.md`) — rated honestly, including
+several `Unknown`s (Representation, Security, Longevity) rather than
+assuming Strong across the board, since the rubric's own logic treats
+an unfalsifiable "Strong, trust us" rating as worse than an honest
+`Unknown`. Both use the rubric's own mixed `dc:`/`dcterms:`/`sat:`
+front matter convention, deliberately different from the site's own
+strict-unqualified-`dc:` rule — two different documents doing two
+different jobs, not an inconsistency to fix.
+
+## UUID registry (`scripts/build-registry.js`, `.githooks/pre-commit`)
+
+Generates human-readable labels for the `dc:identifier`/`dc:relation`
+UUIDs scattered through content, so a CMS field can eventually let an
+editor search by title instead of pasting a UUID by hand — the same gap
+noted in "CMS translation pairing" above, but generalized. Writes two
+sets of files under `content/_registry/` (`works/<uuid>.md`,
+`expressions/<uuid>.md`), git-tracked as real content rather than build
+output, excluded from Eleventy's own page-building via
+`eleventyConfig.ignores.add("content/_registry/**")` in `.eleventy.js`.
+
+**One-time setup after cloning**: `git init` (if not already a repo),
+then `npm install` — the `prepare` script wires `.githooks/pre-commit`
+by setting `git config core.hooksPath .githooks`. Installing before
+`.git` exists is fine; the script detects that and skips with a message
+instead of failing, and re-runs cleanly (`npm install` again, or
+`npm run prepare` directly) once a repo does exist.
+
+**Runs automatically, not manually** — every commit that touches
+content regenerates and stages `content/_registry/` via the pre-commit
+hook, so it's structurally impossible for a commit to ship a stale
+registry. `npm run registry` also exists to run it by hand (useful right
+after setup, or to sanity-check the output), but isn't required day to
+day.
+
+**Real bugs fixed getting this working, not just wired up**:
+`package.json` as originally written referenced a `registry` script and
+a `prepare` script that didn't exist, and didn't declare `glob`/
+`gray-matter` as dependencies even though `build-registry.js` requires
+both — that combination is exactly what produced the original `npm
+error Missing script: "registry"`. Separately, and only found by
+actually *running* the script rather than trusting it once wired up:
+its own docstring contained the literal text `content/**/*.md` inside a
+`/** */` block comment — and `**/ ` contains the two-character sequence
+`*/`, which terminates a block comment early. That's a real syntax
+error (`Unexpected token '*'`), not a configuration problem, and it
+would have surfaced as a second failure immediately after fixing the
+first one. Verified end-to-end afterward: added a throwaway page,
+confirmed the registry picked up its UUID on commit with no manual
+step, removed the page, confirmed the registry dropped it too.
+
+**Not yet connected**: `admin/config.yml` doesn't yet point any CMS
+field at these registries — `fr_ca`'s `relation` field currently uses a
+`relation` widget against the `en_ca` collection directly (see "CMS
+translation pairing"), which is a different, narrower mechanism than
+searching a shared registry. Wiring the registry into the CMS (new file
+collections for `works`/`expressions`, updating the `relation` widgets
+to point at those instead) is a real next step, not done here — this
+pass only fixed the registry generation itself and proved it works.
+
+## Deliberately not yet built
+
+- No accessibility-modality axis (AAC rendering, plain-language pass,
+  audio transcript) — same shape as locale/readability, not built yet.
+- No supersession/version-lineage or part-of/companion-to relations —
+  those are a different kind of relatedness than translation and
+  shouldn't be folded into `relation` the way locale pairing is.
+- No home-page-specific layout — it currently uses the generic
+  `layouts/page.njk` like every other page.
+- No dark mode / `prefers-color-scheme` handling — `color-scheme: light`
+  is hardcoded in `:root`, and only the light-background logo variant
+  (`logo-lockup-dark.svg`) is wired into the header. The white-text
+  variant (`logo-lockup.svg`) is already sitting in `assets/img/logos/`
+  waiting for it — this wasn't a guess, it's an asset that was supplied
+  and hasn't been used yet.
+- The missing-translation fallback always lands on the target locale's
+  *home page*. It doesn't try to find "the nearest translated ancestor"
+  in the URL tree — e.g. a missing `fr-ca/team/leads/` doesn't fall back
+  to a translated `fr-ca/team/`, it goes straight to `fr-ca/`. Worth
+  revisiting if the site grows deep enough for that gap to matter.
+- No user-facing preferences/control panel (text size, contrast, a
+  "simplify this page" toggle in the style of IDRC's own UI Options
+  tool). Presentation-only preferences (size/contrast/spacing) would be
+  a self-contained CSS-variable + localStorage addition. A genuine
+  "simplify this page" toggle would reuse the same `byWork`/`relation`
+  mechanism as the language switcher, generalized to a second axis —
+  gated on designing that accessibility-modality registry first.

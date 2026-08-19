@@ -2,9 +2,9 @@
 /**
  * scripts/build-registry.js
  *
- * Scans content/**/*.md and derives two read-only registries that give
- * human-readable labels to the UUIDs used in dc:identifier / dc:relation
- * front matter:
+ * Scans content/ recursively for markdown files and derives two
+ * read-only registries that give human-readable labels to the UUIDs
+ * used in dc:identifier / dc:relation front matter:
  *
  *   content/_registry/works/<uuid>.md        one per Work (dc:relation)
  *   content/_registry/expressions/<uuid>.md  one per page (dc:identifier)

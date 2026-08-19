@@ -5,9 +5,13 @@
   "scripts": {
     "build": "eleventy",
     "start": "eleventy --serve",
-    "debug": "DEBUG=Eleventy* eleventy"
+    "debug": "DEBUG=Eleventy* eleventy",
+    "registry": "node scripts/build-registry.js",
+    "prepare": "node scripts/setup-git-hooks.js"
   },
   "devDependencies": {
-    "@11ty/eleventy": "^3.1.2"
+    "@11ty/eleventy": "^3.1.2",
+    "glob": "^11.0.0",
+    "gray-matter": "^4.0.3"
   }
 }
