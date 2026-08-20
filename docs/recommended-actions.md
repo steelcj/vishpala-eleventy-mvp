@@ -1,27 +1,13 @@
 # Recommended course of action
 
-> **Correction, added later**: §2 below claimed the File Collections
-> migration was "already implemented and verified" — checked directly
-> against the real repo, it wasn't; `admin/config.yml` was still Folder
-> Collections. It has *since* been done for real (see `README.md`'s
-> "CMS structure: File Collections" section). §1's registry item had
-> the same problem — `npm run registry` didn't even exist in
-> `package.json` at the time, which is the exact bug a real person hit
-> running this document's own advice. §3 and §4 below weren't re-checked
-> as part of this correction; verify before trusting either.
+## Before editors touch the CMS at all
 
-Prioritized by what blocks real editorial use of the CMS first, and what
-can wait. "Done" items from `work-summary.md` aren't repeated here.
+### Completed
 
-## 1. Before editors touch the CMS at all
-
-- **Initialize the real git repo, if not already done**, and run
-  `npm install` *after* that — the `prepare` script needs `.git` to
-  exist to wire up the pre-commit hook; it degrades gracefully if run
-  first, but won't actually be active until re-run after `git init`.
+- **Initialize the real git repo
 - **Regenerate the registry once against real history**:
-  `npm run registry`, commit. Confirms the hook path works end-to-end
-  before anyone relies on it.
+  - `npm run registry`, commit.
+  - Confirms the hook path works end-to-end before anyone relies on it.
 - **Confirm the git-gateway backend's actual commit path.** The
   pre-commit hook (registry regeneration) only runs on commits made
   through local git — if Sveltia's backend commits directly to the

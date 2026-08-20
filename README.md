@@ -143,6 +143,20 @@ errors throw, e.g. in CI: `ELEVENTY_STRICT=1 npm run build`.
 
 ## CMS structure: File Collections, not Folder Collections (`admin/config.yml`)
 
+**Two config bugs fixed after the CMS was actually run for the first
+time** — real errors from a live Sveltia instance, screenshotted, not
+inferred from docs: `backend.name: git-gateway` was never a deferred
+placeholder, it's a backend Sveltia dropped entirely ("will not be
+supported due to performance limitations," confirmed directly against
+Sveltia's own docs) — the CMS refused to load at all. Every `date`
+field used the widget name removed in Decap CMS 3.0 and never present
+in Sveltia; confirmed the exact correct replacement
+(`widget: "datetime"` + `type: "date"`) against Sveltia's own DateTime
+field documentation, matching the running tool's own error text
+exactly. Both fixed now — `backend.name: github` with this repo, and
+every `date` field converted. See git history for the fix commit if you
+want the full before/after.
+
 **This changed since the last update — the previous section here
 described a mechanism that no longer exists.** Migrated from Folder
 Collections (`folder: "content/en-ca"`, `path: "{{slug}}/index"`) to
@@ -465,6 +479,17 @@ real possible improvement, not done here.
 
 ## Deliberately not yet built
 
+- **Rest of `admin/config.yml` hasn't been re-verified against a live
+  Sveltia instance beyond the two confirmed bug classes (backend name,
+  date widget).** Both bugs came from the same root cause — Decap-CMS
+  syntax assumed compatible with Sveltia without checking, despite
+  Sveltia being a from-scratch rewrite that explicitly documents
+  breaking changes from Decap in multiple places (camelCase option
+  names, the `relation` widget's exact behavior, etc.). Other fields in
+  this config (`image`, `list`, `boolean`, `relation`) haven't each been
+  individually re-confirmed the same way `datetime` now has — treat
+  them as unverified until someone actually opens the CMS and checks,
+  not as safe by association with the two fields that did get checked.
 - No accessibility-modality axis (AAC rendering, plain-language pass,
   audio transcript) — same shape as locale/readability, not built yet.
   A `modality` field and an Accessibility Statement page were both
