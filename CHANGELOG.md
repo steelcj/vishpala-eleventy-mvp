@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+* Added file fairy sat-docs-automa release and pubish as well as other automa documents
+
 ### Added
 
 - Standard OSAT repository skeleton: `VERSION`, `CHANGELOG.md`, `ROADMAP.md`, `LICENSE` (GPL-3.0-or-later, full text), `CONTRIBUTING.md`.
