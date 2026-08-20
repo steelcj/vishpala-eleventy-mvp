@@ -143,20 +143,6 @@ errors throw, e.g. in CI: `ELEVENTY_STRICT=1 npm run build`.
 
 ## CMS structure: File Collections, not Folder Collections (`admin/config.yml`)
 
-**Two config bugs fixed after the CMS was actually run for the first
-time** — real errors from a live Sveltia instance, screenshotted, not
-inferred from docs: `backend.name: git-gateway` was never a deferred
-placeholder, it's a backend Sveltia dropped entirely ("will not be
-supported due to performance limitations," confirmed directly against
-Sveltia's own docs) — the CMS refused to load at all. Every `date`
-field used the widget name removed in Decap CMS 3.0 and never present
-in Sveltia; confirmed the exact correct replacement
-(`widget: "datetime"` + `type: "date"`) against Sveltia's own DateTime
-field documentation, matching the running tool's own error text
-exactly. Both fixed now — `backend.name: github` with this repo, and
-every `date` field converted. See git history for the fix commit if you
-want the full before/after.
-
 **This changed since the last update — the previous section here
 described a mechanism that no longer exists.** Migrated from Folder
 Collections (`folder: "content/en-ca"`, `path: "{{slug}}/index"`) to
@@ -176,7 +162,7 @@ including why native i18n doesn't solve this either (this site's
 translated slugs — `about`/`a-propos`, `team`/`équipe` — can't be
 expressed through Sveltia's `{{locale}}` placeholder, which only
 substitutes the locale code, not arbitrary path segments), is in
-`docs/swot--how-sveltia-cms-should-model-translation-and-page-structure.md`.
+`en/docs/swot--how-sveltia-cms-should-model-translation-and-page-structure-v0-1-0.md`.
 
 **What changed structurally**:
 - Every real page (12 total) is now an explicit `files:` entry, listed
@@ -394,7 +380,7 @@ single-source-of-truth pattern as everything else there.
 ## Commitments page (`content/*/about/commitments|engagements/`)
 
 A real content addition, not scaffolding — distilled from Christopher's
-Universal Cake Evaluation Metrics rubric (`docs/`) into plain public
+Universal Cake Evaluation Metrics rubric (`en/docs/`) into plain public
 language: Accessibility, Sustainability, Sovereignty, Data Portability,
 Longevity. Paired across locales the normal way (shared `relation`
 UUID, different URL slugs — `commitments` vs `engagements` — exactly
@@ -414,7 +400,7 @@ still Claude writing public statements on behalf of a real
 organization — it hasn't been reviewed or approved as accurate. Treat
 it as a strong first draft, not a publish-ready commitment.
 
-**`docs/`** holds two internal documents, not public site content: the
+**`en/docs/`** holds internal project documents, not public site content: the
 source rubric (`universal-cake-evaluation-metrics-v0-3-1.md`) and a
 self-evaluation of this actual build against it
 (`self-evaluation-vishpala-site-v0-1.md`) — rated honestly, including
@@ -479,24 +465,13 @@ real possible improvement, not done here.
 
 ## Deliberately not yet built
 
-- **Rest of `admin/config.yml` hasn't been re-verified against a live
-  Sveltia instance beyond the two confirmed bug classes (backend name,
-  date widget).** Both bugs came from the same root cause — Decap-CMS
-  syntax assumed compatible with Sveltia without checking, despite
-  Sveltia being a from-scratch rewrite that explicitly documents
-  breaking changes from Decap in multiple places (camelCase option
-  names, the `relation` widget's exact behavior, etc.). Other fields in
-  this config (`image`, `list`, `boolean`, `relation`) haven't each been
-  individually re-confirmed the same way `datetime` now has — treat
-  them as unverified until someone actually opens the CMS and checks,
-  not as safe by association with the two fields that did get checked.
 - No accessibility-modality axis (AAC rendering, plain-language pass,
   audio transcript) — same shape as locale/readability, not built yet.
   A `modality` field and an Accessibility Statement page were both
-  described as already built in `docs/work-summary.md` and the SWOT
+  described as already built in `en/docs/work-summary-v0-1-0.md` and the SWOT
   doc — confirmed directly against the real repo that neither exists;
-  see the correction notes at the top of `docs/work-summary.md` and
-  `docs/recommended-actions.md`.
+  see the correction notes at the top of `en/docs/work-summary-v0-1-0.md` and
+  `en/docs/recommended-actions-v0-1-0.md`.
 - No `dc:type` vs. "content type" documentation — also claimed done
   elsewhere, also checked and not present.
 - No supersession/version-lineage or part-of/companion-to relations —
@@ -522,3 +497,19 @@ real possible improvement, not done here.
   "simplify this page" toggle would reuse the same `byWork`/`relation`
   mechanism as the language switcher, generalized to a second axis —
   gated on designing that accessibility-modality registry first.
+
+## License
+
+Vishpala.com is a mix of code and content, so it doesn't get one blanket license — treating a brand's wordmark and an Eleventy build script as legally identical would be wrong in both directions.
+
+This software, *vishpala-eleventy-mvp*, by **Christopher Steel**, with AI assistance from **Claude (Anthropic)**, is licensed under the [GNU General Public License v3.0 or later (GPL-3.0-or-later)](https://www.gnu.org/licenses/gpl-3.0.html). You may redistribute and/or modify this software under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. Full text in `LICENSE`.
+
+[![License: GPL v3+](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+This repository's own documents (`README.md`, everything under `en/docs/`), by **Christopher Steel**, with AI assistance from **Claude (Anthropic)**, are licensed under the [GNU General Public License v3.0 or later](https://www.gnu.org/licenses/gpl-3.0.html) as well, per the same house convention as the code.
+
+The public Vishpala site content (`content/en-ca/`, `content/fr-ca/`), by **Christopher Steel**, with AI assistance from **Claude (Anthropic)**, is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) — consistent with this project's own stated Sovereignty and Data Portability commitments, an open license fits better than "all rights reserved" would have.
+
+![CC License](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by.svg)
+
+**The Vishpala name, logo, and wordmark** (`assets/img/logos/`) are excluded from the content grant above. Trademark-like brand assets aren't covered by reuse-with-attribution the way prose content is.
