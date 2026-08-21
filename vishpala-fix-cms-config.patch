@@ -1,0 +1,97 @@
+--- a/admin/config.yml	2026-08-20 15:08:08.203038145 +0000
++++ b/admin/config.yml	2026-08-20 15:02:07.824270223 +0000
+@@ -1,9 +1,29 @@
+ # Sveltia CMS config (Decap-compatible format).
+ #
+-# Swap `backend.name` for whatever you're hosting on (github, gitlab, etc.)
+-# and fill in `repo`. `git-gateway` below is a placeholder.
++# backend.name is github, matching this repo — NOT a placeholder to
++# swap later. Sveltia CMS dropped Git Gateway support entirely (not
++# just discouraged — genuinely unimplemented, confirmed directly
++# against Sveltia's own docs: "Bitbucket, Gitea/Forgejo and Git Gateway
++# backends will not be supported due to performance limitations"), so
++# `git-gateway` here wasn't a deferred config choice, it was a config
++# that could never have worked. Supported backends as of writing:
++# github, gitlab, gitea (self-hosted Gitea/Forgejo), test (an in-memory
++# backend for trying the CMS without touching real files).
++#
++# For LOCAL testing without setting up GitHub OAuth: Sveltia's Local
++# Development Workflow lets you skip auth entirely — run the dev
++# server, open /admin/index.html in Chrome or Edge, and click "Work
++# with Local Repository" to grant File System Access API permission on
++# this project's root folder directly. No proxy server, no OAuth app,
++# no local_backend config flag needed (that's the old Decap mechanism;
++# Sveltia replaced it with this). Real remote access (from anywhere,
++# not just this machine) does need OAuth — either Sveltia's own
++# Authenticator (deployable to Cloudflare Workers) or a personal access
++# token; not configured here, since it's not needed for local
++# verification of the fixes in this file.
+ backend:
+-  name: git-gateway
++  name: github
++  repo: steelcj/vishpala-eleventy-mvp
+   branch: main
+ 
+ site_url: https://vishpala.com
+@@ -91,7 +111,7 @@
+       - { label: "Description (dc:description)", name: "description", widget: "text", required: false, i18n: true }
+       - { label: "Publisher (dc:publisher)", name: "publisher", widget: "string", required: false, i18n: true }
+       - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false, i18n: true }
+-      - { label: "Date (dc:date)", name: "date", widget: "date", required: false, date_format: "YYYY-MM-DD", i18n: true, hint: "Leave blank to use this page's actual first-commit date automatically (recommended)." }
++      - { label: "Date (dc:date)", name: "date", widget: "datetime", type: "date", required: false, i18n: true, hint: "Leave blank to use this page's actual first-commit date automatically (recommended)." }
+       - { label: "Type (dc:type)", name: "type", widget: "string", required: false, i18n: duplicate, hint: "Nature of the content, e.g. Text — see the DCMI Type Vocabulary." }
+       - { label: "Format (dc:format)", name: "format", widget: "string", required: false, i18n: duplicate }
+       - { label: "Source (dc:source)", name: "source", widget: "string", required: false, i18n: true }
+@@ -147,9 +167,9 @@
+   - { label: "Contributor (dc:contributor)", name: "contributor", widget: "string", required: false, hint: "Someone other than the primary creator who contributed to this page." }
+   - label: "Date (dc:date)"
+     name: "date"
+-    widget: "date"
++    widget: "datetime"
++    type: "date"
+     required: false
+-    date_format: "YYYY-MM-DD"
+     hint: "Leave blank to use this page's actual first-commit date automatically (recommended). Only set this to override that — e.g. backdating migrated content."
+   - { label: "Type (dc:type)", name: "type", widget: "string", required: false, hint: "Nature of the content, e.g. Text, Image, Sound, Dataset — see the DCMI Type Vocabulary." }
+   - { label: "Format (dc:format)", name: "format", widget: "string", required: false, hint: "IANA media type, e.g. text/html." }
+--- a/README.md	2026-08-20 15:08:08.203038145 +0000
++++ b/README.md	2026-08-20 15:02:30.045184692 +0000
+@@ -143,6 +143,20 @@
+ 
+ ## CMS structure: File Collections, not Folder Collections (`admin/config.yml`)
+ 
++**Two config bugs fixed after the CMS was actually run for the first
++time** — real errors from a live Sveltia instance, screenshotted, not
++inferred from docs: `backend.name: git-gateway` was never a deferred
++placeholder, it's a backend Sveltia dropped entirely ("will not be
++supported due to performance limitations," confirmed directly against
++Sveltia's own docs) — the CMS refused to load at all. Every `date`
++field used the widget name removed in Decap CMS 3.0 and never present
++in Sveltia; confirmed the exact correct replacement
++(`widget: "datetime"` + `type: "date"`) against Sveltia's own DateTime
++field documentation, matching the running tool's own error text
++exactly. Both fixed now — `backend.name: github` with this repo, and
++every `date` field converted. See git history for the fix commit if you
++want the full before/after.
++
+ **This changed since the last update — the previous section here
+ described a mechanism that no longer exists.** Migrated from Folder
+ Collections (`folder: "content/en-ca"`, `path: "{{slug}}/index"`) to
+@@ -465,6 +479,17 @@
+ 
+ ## Deliberately not yet built
+ 
++- **Rest of `admin/config.yml` hasn't been re-verified against a live
++  Sveltia instance beyond the two confirmed bug classes (backend name,
++  date widget).** Both bugs came from the same root cause — Decap-CMS
++  syntax assumed compatible with Sveltia without checking, despite
++  Sveltia being a from-scratch rewrite that explicitly documents
++  breaking changes from Decap in multiple places (camelCase option
++  names, the `relation` widget's exact behavior, etc.). Other fields in
++  this config (`image`, `list`, `boolean`, `relation`) haven't each been
++  individually re-confirmed the same way `datetime` now has — treat
++  them as unverified until someone actually opens the CMS and checks,
++  not as safe by association with the two fields that did get checked.
+ - No accessibility-modality axis (AAC rendering, plain-language pass,
+   audio transcript) — same shape as locale/readability, not built yet.
+   A `modality` field and an Accessibility Statement page were both
