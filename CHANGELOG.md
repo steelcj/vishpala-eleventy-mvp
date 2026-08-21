@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+* lots of work not well documented
+
+### Fixed
+
+- `admin/config.yml`: `backend.name` changed from `git-gateway` (dropped entirely by Sveltia CMS, not a deferred placeholder, the CMS refused to load at all) to `github`, pointed at this repository. Every `date` field converted from the removed `widget: "date"` to `widget: "datetime"` + `type: "date"`, matching Sveltia's own current field documentation. Both confirmed against real Sveltia CMS error output, not inferred from Decap-CMS-vintage assumptions.
+- `README.md`: documented a real UX gap in the CMS's `relation` field, pasting a UUID gives no live confirmation of which Work it resolves to, only a static hint pointing at the registry. Not a correctness bug (the build-time validator still catches real breakage), but a real gap between the data being right and an editor being able to see that it's right. The concrete shape of the fix is recorded for whenever it gets picked up: real `relation`-type CMS collections for the registry, labeled with the actual FRBR terms (Work, Expression) in the UI.
+
+### Removed
+
+- Stale `docs/` directory (7 files) superseded by the `en/docs/` restructuring in the prior release; these were pre-conformance-cleanup duplicates that had silently drifted from their `en/docs/` counterparts (still had the original em dashes and un-corrected version-suffix identifiers) because an overlay-style file update doesn't delete files that moved.
+- `vishpala-fix-cms-config.patch` and `vishpala-note-uuid-relation-ux.patch`, both already applied. Keeping an applied patch file around is redundant (`git show`/`git format-patch` reproduce it from the commit on demand) and it actively risks misleading a future reader once the codebase moves past what it describes.
+
+### Changed
+
+- `en/docs/dev-note-sveltia-local-vs-github-v0-1.md` renamed to `en/docs/dev-note-sveltia-local-vs-github-v0-1-0.md` (the three-part version suffix every other document in `en/docs/` uses) and brought to the same conformance standard as its siblings: `dc:identifier` corrected to match the filename slug, missing `dcterms:modified`/`sat:uuid` fields added, em dashes converted to commas. This file had never gone through the conformance pass applied to the rest of `en/docs/` in the prior release, having been added to the old `docs/` location afterward.
+- `.gitignore`: added `dist/`.
+
 ## [0.1.0] - 2026-08-20
 
 * Added file fairy sat-docs-automa release and pubish as well as other automa documents
